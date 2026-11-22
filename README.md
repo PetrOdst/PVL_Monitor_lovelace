@@ -26,7 +26,7 @@ Copy `PVL_Monitor_lovelace.js` to the `www` directory in your Home Assistant con
 
 ## Card configuration
 
-When adding or editing the card in the Home Assistant dashboard editor, choose the visual editor to select sensors, rename the card and its displayed readings, adjust the gauge range, and independently show or hide each reading. The same settings can still be entered as YAML.
+When adding or editing the card in the Home Assistant dashboard editor, choose the visual editor to select sensors, rename the card and its displayed readings, adjust the gauge range, and independently show or hide each reading. You can also show or hide the water-level gauge, its numeric value, the measurement time, and the history chart separately. The same settings can still be entered as YAML.
 
 ```yaml
 type: custom:pvl-reservoir-card
@@ -41,6 +41,9 @@ reference_difference_entity: sensor.vd_slapy_water_level_difference_from_referen
 min_level: 220
 max_level: 273
 show_history: true
+show_level_gauge: true
+show_level_value: true
+show_measurement_time: true
 ```
 
 The entity IDs above are examples. Home Assistant lets users rename entity IDs; check the configured entities if any ID is different. Configure the reference water level in the integration's **Configure** options. To display its difference in the card, set `reference_difference_entity` to the generated sensor. For Orlík or Lipno I, set the entity options to that reservoir's sensors and adjust `min_level` and `max_level` to its water-level range.
@@ -68,7 +71,9 @@ Use the **Zobrazení dlaždic** switches to show or hide a reading without chang
 | `precipitation_24h_label` | string | `Srážky za 24 hodin` | Label for the precipitation metric. |
 | `air_temperature_label` | string | `Teplota vzduchu` | Label for the air temperature metric. |
 | `reference_difference_label` | string | `Rozdíl od referenční hladiny` | Label shown for the optional reference difference. |
-| `show_water_level` | boolean | `true` | Show or hide the water-level gauge. |
+| `show_level_gauge` | boolean | `true` | Show or hide the water-level gauge independently. |
+| `show_level_value` | boolean | `true` | Show or hide the numeric water-level value and range note independently. |
+| `show_measurement_time` | boolean | `true` | Show or hide the source measurement time. |
 | `show_inflow` | boolean | `true` | Show or hide the inflow tile. |
 | `show_outflow` | boolean | `true` | Show or hide the outflow tile. |
 | `show_volume` | boolean | `true` | Show or hide the reservoir-volume tile. |
@@ -78,6 +83,8 @@ Use the **Zobrazení dlaždic** switches to show or hide a reading without chang
 | `min_level` | number (m) | `220` | Lower limit of the level gauge. |
 | `max_level` | number (m) | `273` | Upper limit of the level gauge; must exceed `min_level`. |
 | `show_history` | boolean | `true` | Show the one-hour and 24-hour Recorder history chart. |
+
+The older `show_water_level` option is still accepted; when the new gauge and value options are not specified, it controls both together.
 
 The legacy `entities:` mapping (`water_level`, `inflow`, `outflow`, `volume`, `precipitation_24h`, `air_temperature`, `reference_difference`) is also supported. Explicit `*_entity` options take precedence. The card displays the difference sensor value supplied by the integration; it does not calculate or select reference levels.
 

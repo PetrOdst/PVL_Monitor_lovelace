@@ -39,7 +39,9 @@ const DEFAULT_LABELS = {
 };
 
 const VISIBILITY_OPTIONS = {
-  water_level: "show_water_level",
+  level_gauge: "show_level_gauge",
+  level_value: "show_level_value",
+  measurement_time: "show_measurement_time",
   inflow: "show_inflow",
   outflow: "show_outflow",
   volume: "show_volume",
@@ -89,7 +91,11 @@ class PVLReservoirCard extends HTMLElement {
     });
     const visible = {};
     Object.entries(VISIBILITY_OPTIONS).forEach(([key, option]) => {
-      visible[key] = config[option] !== false;
+      const legacyLevelVisibility = (key === "level_gauge" || key === "level_value")
+        && !Object.hasOwn(config, option)
+        ? config.show_water_level !== false
+        : true;
+      visible[key] = config[option] !== false && legacyLevelVisibility;
     });
 
     this._config = {
@@ -175,7 +181,8 @@ class PVLReservoirCard extends HTMLElement {
         .source { color: var(--secondary-text-color); font-size: 0.82rem; white-space: nowrap; }
         .overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 0.85fr); gap: clamp(18px, 4vw, 38px); align-items: stretch; }
         .level-panel { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 18px; align-items: center; min-height: 210px; }
-        .level-panel[hidden] { display: none; }
+        .level-panel[hidden], .gauge-wrap[hidden], .level-number[hidden], .updated[hidden] { display: none; }
+        .level-panel[data-gauge="false"] { grid-template-columns: minmax(0, 1fr); }
         .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 7px; height: 190px; }
         .gauge-label { color: var(--secondary-text-color); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
         .gauge { position: relative; flex: 1; width: 28px; overflow: hidden; border: 1px solid var(--pvl-line); border-radius: 999px; background: var(--pvl-surface); }
@@ -263,7 +270,12 @@ class PVLReservoirCard extends HTMLElement {
       </ha-card>`;
 
     this.shadowRoot.querySelector("#card-title").textContent = this._config.name;
-    this.shadowRoot.querySelector("#level-panel").hidden = !this._config.visible.water_level;
+    const levelPanel = this.shadowRoot.querySelector("#level-panel");
+    levelPanel.hidden = !this._config.visible.level_gauge && !this._config.visible.level_value;
+    levelPanel.dataset.gauge = String(this._config.visible.level_gauge);
+    this.shadowRoot.querySelector(".gauge-wrap").hidden = !this._config.visible.level_gauge;
+    this.shadowRoot.querySelector(".level-number").hidden = !this._config.visible.level_value;
+    this.shadowRoot.querySelector("#updated").hidden = !this._config.visible.measurement_time;
     this.shadowRoot.querySelector("#level-label").textContent = this._config.labels.water_level;
     this.shadowRoot.querySelector("#reference-difference-label").textContent = this._config.labels.reference_difference;
     this.shadowRoot.querySelector("#gauge-min").textContent = `${this._format(this._config.minLevel, 1)} m`;
@@ -585,7 +597,9 @@ const LABEL_EDITOR_SCHEMA = [
 ];
 
 const VISIBILITY_EDITOR_SCHEMA = [
-  { name: "show_water_level", selector: { boolean: {} } },
+  { name: "show_level_gauge", selector: { boolean: {} } },
+  { name: "show_level_value", selector: { boolean: {} } },
+  { name: "show_measurement_time", selector: { boolean: {} } },
   { name: "show_inflow", selector: { boolean: {} } },
   { name: "show_outflow", selector: { boolean: {} } },
   { name: "show_volume", selector: { boolean: {} } },
@@ -606,13 +620,13 @@ const EDITOR_SCHEMA = [
 
 const EDITOR_LABELS = {
   name: "Název karty",
-  level_entity: "Senzor výšky hladiny",
-  inflow_entity: "Senzor přítoku",
-  outflow_entity: "Senzor odtoku",
-  volume_entity: "Senzor objemu nádrže",
-  precipitation_24h_entity: "Senzor srážek za 24 hodin",
-  air_temperature_entity: "Senzor teploty vzduchu",
-  reference_difference_entity: "Senzor rozdílu od referenční hladiny",
+  level_entity: "Entita · Výška hladiny",
+  inflow_entity: "Entita · Přítok",
+  outflow_entity: "Entita · Odtok",
+  volume_entity: "Entita · Objem nádrže",
+  precipitation_24h_entity: "Entita · Srážky za 24 hodin",
+  air_temperature_entity: "Entita · Teplota vzduchu",
+  reference_difference_entity: "Entita · Rozdíl od referenční hladiny",
   level_label: "Popisek výšky hladiny",
   inflow_label: "Popisek přítoku",
   outflow_label: "Popisek odtoku",
@@ -620,7 +634,9 @@ const EDITOR_LABELS = {
   precipitation_24h_label: "Popisek srážek",
   air_temperature_label: "Popisek teploty vzduchu",
   reference_difference_label: "Popisek rozdílu od reference",
-  show_water_level: "Zobrazit hladinu",
+  show_level_gauge: "Zobrazit stupnici hladiny",
+  show_level_value: "Zobrazit hodnotu hladiny",
+  show_measurement_time: "Zobrazit čas měření",
   show_inflow: "Zobrazit přítok",
   show_outflow: "Zobrazit odtok",
   show_volume: "Zobrazit objem nádrže",
@@ -638,7 +654,7 @@ class PVLReservoirCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._form = document.createElement("ha-form");
     this._form.schema = EDITOR_SCHEMA;
-    this._form.computeLabel = (schema) => EDITOR_LABELS[schema.name];
+    this._form.computeLabel = (schema) => this._computeEditorLabel(schema.name);
     this._form.computeHelper = (schema) => schema.name === "reference_difference_entity"
       ? "Tuto entitu vytvoří integrace po nastavení referenční hladiny."
       : undefined;
@@ -668,6 +684,9 @@ class PVLReservoirCardEditor extends HTMLElement {
       min_level: config.min_level ?? 220,
       max_level: config.max_level ?? 273,
       show_history: config.show_history !== false,
+      show_level_gauge: config.show_level_gauge ?? config.show_water_level !== false,
+      show_level_value: config.show_level_value ?? config.show_water_level !== false,
+      show_measurement_time: config.show_measurement_time !== false,
     };
     Object.entries(ENTITY_OPTIONS).forEach(([key, option]) => {
       const configured = Object.hasOwn(config, option)
@@ -681,13 +700,36 @@ class PVLReservoirCardEditor extends HTMLElement {
       data[option] = config[option] ?? DEFAULT_LABELS[key];
     });
     Object.entries(VISIBILITY_OPTIONS).forEach(([key, option]) => {
-      data[option] = config[option] !== false;
+      const legacyLevelVisibility = (key === "level_gauge" || key === "level_value")
+        && !Object.hasOwn(config, option)
+        ? config.show_water_level !== false
+        : true;
+      data[option] = config[option] !== false && legacyLevelVisibility;
     });
+    this._editorData = data;
     this._form.data = data;
+  }
+
+  _computeEditorLabel(name) {
+    const entityKey = Object.entries(ENTITY_OPTIONS).find(([, option]) => option === name)?.[0];
+    const visibilityKey = Object.entries(VISIBILITY_OPTIONS).find(([, option]) => option === name)?.[0];
+    const key = entityKey || visibilityKey;
+    if (key) {
+      const labelKey = key === "level_gauge" || key === "level_value" ? "water_level" : key;
+      const label = LABEL_OPTIONS[labelKey]
+        ? this._editorData?.[LABEL_OPTIONS[labelKey]] || DEFAULT_LABELS[labelKey]
+        : key === "measurement_time"
+          ? "Čas měření"
+          : DEFAULT_LABELS[labelKey];
+      return entityKey ? `Entita · ${label}` : `Zobrazit · ${label}`;
+    }
+    return EDITOR_LABELS[name];
   }
 
   _valueChanged(event) {
     const values = event.detail.value;
+    this._editorData = values;
+    this._form.requestUpdate?.();
     const minLevel = Number(values.min_level ?? 220);
     const maxLevel = Number(values.max_level ?? 273);
     if (!Number.isFinite(minLevel) || !Number.isFinite(maxLevel) || minLevel >= maxLevel) {
