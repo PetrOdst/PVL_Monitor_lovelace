@@ -88,6 +88,20 @@ class PVLReservoirCard extends HTMLElement {
     };
   }
 
+  static getConfigElement() {
+    return document.createElement("pvl-reservoir-card-editor");
+  }
+
+  static getConfigForm() {
+    return {
+      schema: EDITOR_SCHEMA,
+      computeLabel: (schema) => EDITOR_LABELS[schema.name],
+      computeHelper: (schema) => schema.name === "reference_difference_entity"
+        ? "Tuto entitu vytvoří integrace po nastavení referenční hladiny."
+        : undefined,
+    };
+  }
+
   _build() {
     if (!this.shadowRoot) {
       this.attachShadow({ mode: "open" });
@@ -493,6 +507,102 @@ class PVLReservoirCard extends HTMLElement {
   }
 }
 
+const EDITOR_SCHEMA = [
+  { name: "name", selector: { text: {} } },
+  { name: "level_entity", selector: { entity: { domain: ["sensor"] } } },
+  { name: "inflow_entity", selector: { entity: { domain: ["sensor"] } } },
+  { name: "outflow_entity", selector: { entity: { domain: ["sensor"] } } },
+  { name: "volume_entity", selector: { entity: { domain: ["sensor"] } } },
+  { name: "precipitation_24h_entity", selector: { entity: { domain: ["sensor"] } } },
+  { name: "air_temperature_entity", selector: { entity: { domain: ["sensor"] } } },
+  { name: "reference_difference_entity", selector: { entity: { domain: ["sensor"] } } },
+  { name: "min_level", selector: { number: { mode: "box", step: 0.1, unit_of_measurement: "m" } } },
+  { name: "max_level", selector: { number: { mode: "box", step: 0.1, unit_of_measurement: "m" } } },
+  { name: "show_history", selector: { boolean: {} } },
+];
+
+const EDITOR_LABELS = {
+  name: "Název karty",
+  level_entity: "Senzor výšky hladiny",
+  inflow_entity: "Senzor přítoku",
+  outflow_entity: "Senzor odtoku",
+  volume_entity: "Senzor objemu nádrže",
+  precipitation_24h_entity: "Senzor srážek za 24 hodin",
+  air_temperature_entity: "Senzor teploty vzduchu",
+  reference_difference_entity: "Senzor rozdílu od referenční hladiny",
+  min_level: "Minimum stupnice (m)",
+  max_level: "Maximum stupnice (m)",
+  show_history: "Zobrazit graf historie",
+};
+
+class PVLReservoirCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._form = document.createElement("ha-form");
+    this._form.schema = EDITOR_SCHEMA;
+    this._form.computeLabel = (schema) => EDITOR_LABELS[schema.name];
+    this._form.computeHelper = (schema) => schema.name === "reference_difference_entity"
+      ? "Tuto entitu vytvoří integrace po nastavení referenční hladiny."
+      : undefined;
+    this._form.addEventListener("value-changed", (event) => this._valueChanged(event));
+    this._error = document.createElement("div");
+    this._error.setAttribute("role", "alert");
+    this._error.hidden = true;
+    this.shadowRoot.innerHTML = "<style>:host{display:block}#error{color:var(--error-color);padding:0 12px 12px}</style>";
+    this._error.id = "error";
+    this.shadowRoot.append(this._form, this._error);
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._form.hass = hass;
+  }
+
+  get hass() {
+    return this._hass;
+  }
+
+  setConfig(config) {
+    this._config = config;
+    const legacyEntities = config.entities && typeof config.entities === "object" ? config.entities : {};
+    const data = {
+      name: config.name ?? "VD Slapy",
+      min_level: config.min_level ?? 220,
+      max_level: config.max_level ?? 273,
+      show_history: config.show_history !== false,
+    };
+    Object.entries(ENTITY_OPTIONS).forEach(([key, option]) => {
+      const configured = config[option] ?? legacyEntities[key] ?? DEFAULT_ENTITIES[key];
+      data[option] = typeof configured === "string" ? configured : "";
+    });
+    this._form.data = data;
+  }
+
+  _valueChanged(event) {
+    const values = event.detail.value;
+    const minLevel = Number(values.min_level ?? 220);
+    const maxLevel = Number(values.max_level ?? 273);
+    if (!Number.isFinite(minLevel) || !Number.isFinite(maxLevel) || minLevel >= maxLevel) {
+      this._error.textContent = "Maximum stupnice musí být vyšší než minimum.";
+      this._error.hidden = false;
+      return;
+    }
+
+    this._error.hidden = true;
+    const config = { ...this._config, ...values };
+    delete config.entities;
+    this._config = config;
+    const changedEvent = new Event("config-changed", { bubbles: true, composed: true });
+    changedEvent.detail = { config };
+    this.dispatchEvent(changedEvent);
+  }
+}
+
+if (!customElements.get("pvl-reservoir-card-editor")) {
+  customElements.define("pvl-reservoir-card-editor", PVLReservoirCardEditor);
+}
+
 if (!customElements.get("pvl-reservoir-card")) {
   customElements.define("pvl-reservoir-card", PVLReservoirCard);
 }
@@ -503,4 +613,5 @@ window.customCards.push({
   name: "PVL Reservoir Monitor",
   description: "Current reservoir level and hydrological data for VD Slapy.",
   preview: true,
+  documentationURL: "https://github.com/PetrOdst/PVL_Monitor_lovelace",
 });

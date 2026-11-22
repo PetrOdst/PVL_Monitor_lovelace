@@ -26,6 +26,8 @@ Copy `PVL_Monitor_lovelace.js` to the `www` directory in your Home Assistant con
 
 ## Card configuration
 
+When adding or editing the card in the Home Assistant dashboard editor, choose the visual editor to select sensors, rename the card, adjust the gauge range, and show or hide the history chart. The same settings can still be entered as YAML.
+
 ```yaml
 type: custom:pvl-reservoir-card
 name: VD Slapy
