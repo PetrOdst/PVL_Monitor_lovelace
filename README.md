@@ -26,7 +26,7 @@ Copy `PVL_Monitor_lovelace.js` to the `www` directory in your Home Assistant con
 
 ## Card configuration
 
-When adding or editing the card in the Home Assistant dashboard editor, choose the visual editor to select sensors, rename the card, adjust the gauge range, and show or hide the history chart. The same settings can still be entered as YAML.
+When adding or editing the card in the Home Assistant dashboard editor, choose the visual editor to select or clear sensors, rename the card and its displayed readings, adjust the gauge range, and show or hide the history chart. The same settings can still be entered as YAML.
 
 ```yaml
 type: custom:pvl-reservoir-card
@@ -47,6 +47,8 @@ The entity IDs above are examples. Home Assistant lets users rename entity IDs; 
 
 All options are optional and default to the Slapy measurement entities. Missing or unavailable entities are shown as unavailable without breaking the card.
 
+Clear a metric's entity in the visual editor to remove that tile from the card. Leave an entity selected and change its label field to rename the tile.
+
 ## Options
 
 | Option | Type | Default | Description |
@@ -59,6 +61,13 @@ All options are optional and default to the Slapy measurement entities. Missing 
 | `precipitation_24h_entity` | entity ID | `sensor.vd_slapy_pvl_reservoir_slapy_precipitation_24h` | Rolling 24-hour precipitation sensor. |
 | `air_temperature_entity` | entity ID | `sensor.vd_slapy_pvl_reservoir_slapy_air_temperature` | Current air-temperature sensor. |
 | `reference_difference_entity` | entity ID | Not set | Optional integration sensor showing current level minus its configured reference. |
+| `level_label` | string | `Výška hladiny` | Label shown beside the gauge value. |
+| `inflow_label` | string | `Přítok` | Label for the inflow metric. |
+| `outflow_label` | string | `Odtok` | Label for the outflow metric. |
+| `volume_label` | string | `Objem nádrže` | Label for the reservoir volume metric. |
+| `precipitation_24h_label` | string | `Srážky za 24 hodin` | Label for the precipitation metric. |
+| `air_temperature_label` | string | `Teplota vzduchu` | Label for the air temperature metric. |
+| `reference_difference_label` | string | `Rozdíl od referenční hladiny` | Label shown for the optional reference difference. |
 | `min_level` | number (m) | `220` | Lower limit of the level gauge. |
 | `max_level` | number (m) | `273` | Upper limit of the level gauge; must exceed `min_level`. |
 | `show_history` | boolean | `true` | Show the one-hour and 24-hour Recorder history chart. |

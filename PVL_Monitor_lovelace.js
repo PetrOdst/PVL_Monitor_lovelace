@@ -18,6 +18,26 @@ const ENTITY_OPTIONS = {
   reference_difference: "reference_difference_entity",
 };
 
+const LABEL_OPTIONS = {
+  water_level: "level_label",
+  inflow: "inflow_label",
+  outflow: "outflow_label",
+  volume: "volume_label",
+  precipitation_24h: "precipitation_24h_label",
+  air_temperature: "air_temperature_label",
+  reference_difference: "reference_difference_label",
+};
+
+const DEFAULT_LABELS = {
+  water_level: "Výška hladiny",
+  inflow: "Přítok",
+  outflow: "Odtok",
+  volume: "Objem nádrže",
+  precipitation_24h: "Srážky za 24 hodin",
+  air_temperature: "Teplota vzduchu",
+  reference_difference: "Rozdíl od referenční hladiny",
+};
+
 const METRICS = [
   ["inflow", "Přítok", "m³/s", 2],
   ["outflow", "Odtok", "m³/s", 2],
@@ -43,8 +63,19 @@ class PVLReservoirCard extends HTMLElement {
     const legacyEntities = config.entities && typeof config.entities === "object" ? config.entities : {};
     const entities = {};
     Object.entries(ENTITY_OPTIONS).forEach(([key, option]) => {
-      const configured = config[option] ?? legacyEntities[key] ?? DEFAULT_ENTITIES[key];
+      const configured = Object.hasOwn(config, option)
+        ? config[option]
+        : Object.hasOwn(legacyEntities, key)
+          ? legacyEntities[key]
+          : DEFAULT_ENTITIES[key];
       entities[key] = typeof configured === "string" && configured.trim() ? configured.trim() : null;
+    });
+    const labels = {};
+    Object.entries(LABEL_OPTIONS).forEach(([key, option]) => {
+      const configured = config[option];
+      labels[key] = typeof configured === "string" && configured.trim()
+        ? configured.trim()
+        : DEFAULT_LABELS[key];
     });
 
     this._config = {
@@ -52,6 +83,7 @@ class PVLReservoirCard extends HTMLElement {
       minLevel,
       maxLevel,
       entities,
+      labels,
       showHistory: config.show_history !== false,
     };
     this._period = this._period || "day";
@@ -188,7 +220,7 @@ class PVLReservoirCard extends HTMLElement {
               <span class="gauge-label" id="gauge-min"></span>
             </div>
             <div class="level-number">
-              <div class="level-label">Výška hladiny</div>
+              <div class="level-label" id="level-label"></div>
               <div class="level-value"><span id="level-value">—</span><span class="level-unit">m n. m.</span></div>
               <div class="range-note" id="range-note"></div>
             </div>
@@ -201,7 +233,7 @@ class PVLReservoirCard extends HTMLElement {
         </div>
         <section class="section" id="reference-section" hidden>
           <div class="reference-row">
-            <h3 class="section-title">Rozdíl od referenční hladiny</h3>
+            <h3 class="section-title" id="reference-difference-label"></h3>
             <span class="difference" id="difference">—</span>
           </div>
         </section>
@@ -215,6 +247,8 @@ class PVLReservoirCard extends HTMLElement {
       </ha-card>`;
 
     this.shadowRoot.querySelector("#card-title").textContent = this._config.name;
+    this.shadowRoot.querySelector("#level-label").textContent = this._config.labels.water_level;
+    this.shadowRoot.querySelector("#reference-difference-label").textContent = this._config.labels.reference_difference;
     this.shadowRoot.querySelector("#gauge-min").textContent = `${this._format(this._config.minLevel, 1)} m`;
     this.shadowRoot.querySelector("#gauge-max").textContent = `${this._format(this._config.maxLevel, 1)} m`;
     this.shadowRoot.querySelector("#history-section").hidden = !this._config.showHistory;
@@ -235,12 +269,15 @@ class PVLReservoirCard extends HTMLElement {
   _renderMetrics() {
     const container = this.shadowRoot.querySelector("#metrics");
     container.replaceChildren();
-    METRICS.forEach(([key, label, unit, precision]) => {
+    METRICS.forEach(([key, defaultLabel, unit, precision]) => {
+      if (!this._config.entities[key]) {
+        return;
+      }
       const metric = document.createElement("div");
       metric.className = "metric";
       const metricLabel = document.createElement("div");
       metricLabel.className = "metric-label";
-      metricLabel.textContent = label;
+      metricLabel.textContent = this._config.labels[key] || defaultLabel;
       const value = document.createElement("div");
       value.className = "metric-value";
       value.dataset.metric = key;
@@ -507,8 +544,7 @@ class PVLReservoirCard extends HTMLElement {
   }
 }
 
-const EDITOR_SCHEMA = [
-  { name: "name", selector: { text: {} } },
+const ENTITY_EDITOR_SCHEMA = [
   { name: "level_entity", selector: { entity: { domain: ["sensor"] } } },
   { name: "inflow_entity", selector: { entity: { domain: ["sensor"] } } },
   { name: "outflow_entity", selector: { entity: { domain: ["sensor"] } } },
@@ -516,6 +552,22 @@ const EDITOR_SCHEMA = [
   { name: "precipitation_24h_entity", selector: { entity: { domain: ["sensor"] } } },
   { name: "air_temperature_entity", selector: { entity: { domain: ["sensor"] } } },
   { name: "reference_difference_entity", selector: { entity: { domain: ["sensor"] } } },
+];
+
+const LABEL_EDITOR_SCHEMA = [
+  { name: "level_label", selector: { text: {} } },
+  { name: "inflow_label", selector: { text: {} } },
+  { name: "outflow_label", selector: { text: {} } },
+  { name: "volume_label", selector: { text: {} } },
+  { name: "precipitation_24h_label", selector: { text: {} } },
+  { name: "air_temperature_label", selector: { text: {} } },
+  { name: "reference_difference_label", selector: { text: {} } },
+];
+
+const EDITOR_SCHEMA = [
+  { name: "name", selector: { text: {} } },
+  { type: "expandable", name: "", flatten: true, title: "Entity senzory", schema: ENTITY_EDITOR_SCHEMA },
+  { type: "expandable", name: "", flatten: true, title: "Popisky hodnot", schema: LABEL_EDITOR_SCHEMA },
   { name: "min_level", selector: { number: { mode: "box", step: 0.1, unit_of_measurement: "m" } } },
   { name: "max_level", selector: { number: { mode: "box", step: 0.1, unit_of_measurement: "m" } } },
   { name: "show_history", selector: { boolean: {} } },
@@ -530,6 +582,13 @@ const EDITOR_LABELS = {
   precipitation_24h_entity: "Senzor srážek za 24 hodin",
   air_temperature_entity: "Senzor teploty vzduchu",
   reference_difference_entity: "Senzor rozdílu od referenční hladiny",
+  level_label: "Popisek výšky hladiny",
+  inflow_label: "Popisek přítoku",
+  outflow_label: "Popisek odtoku",
+  volume_label: "Popisek objemu nádrže",
+  precipitation_24h_label: "Popisek srážek",
+  air_temperature_label: "Popisek teploty vzduchu",
+  reference_difference_label: "Popisek rozdílu od reference",
   min_level: "Minimum stupnice (m)",
   max_level: "Maximum stupnice (m)",
   show_history: "Zobrazit graf historie",
@@ -573,8 +632,15 @@ class PVLReservoirCardEditor extends HTMLElement {
       show_history: config.show_history !== false,
     };
     Object.entries(ENTITY_OPTIONS).forEach(([key, option]) => {
-      const configured = config[option] ?? legacyEntities[key] ?? DEFAULT_ENTITIES[key];
+      const configured = Object.hasOwn(config, option)
+        ? config[option]
+        : Object.hasOwn(legacyEntities, key)
+          ? legacyEntities[key]
+          : DEFAULT_ENTITIES[key];
       data[option] = typeof configured === "string" ? configured : "";
+    });
+    Object.entries(LABEL_OPTIONS).forEach(([key, option]) => {
+      data[option] = config[option] ?? DEFAULT_LABELS[key];
     });
     this._form.data = data;
   }
@@ -591,6 +657,12 @@ class PVLReservoirCardEditor extends HTMLElement {
 
     this._error.hidden = true;
     const config = { ...this._config, ...values };
+    Object.values(ENTITY_OPTIONS).forEach((option) => {
+      config[option] = typeof values[option] === "string" ? values[option].trim() : "";
+    });
+    Object.values(LABEL_OPTIONS).forEach((option) => {
+      config[option] = typeof values[option] === "string" ? values[option].trim() : "";
+    });
     delete config.entities;
     this._config = config;
     const changedEvent = new Event("config-changed", { bubbles: true, composed: true });
