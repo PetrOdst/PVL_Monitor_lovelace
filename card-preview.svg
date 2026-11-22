@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="500" viewBox="0 0 960 500" role="img" aria-labelledby="title description">
+  <title id="title">PVL Reservoir Monitor Lovelace card preview</title>
+  <desc id="description">Illustrative Home Assistant card showing reservoir level, flow readings, reference difference and a history chart.</desc>
+  <rect width="960" height="500" rx="28" fill="#eef3f7"/>
+  <rect x="36" y="30" width="888" height="440" rx="22" fill="#fff" stroke="#dce4eb" stroke-width="2"/>
+  <text x="68" y="78" fill="#657789" font-family="Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="2">PVL · VLTAVA</text>
+  <text x="68" y="118" fill="#172b3b" font-family="Arial,sans-serif" font-size="30" font-weight="700">VD Slapy</text>
+  <text x="790" y="82" fill="#657789" font-family="Arial,sans-serif" font-size="15">Aktuální měření</text>
+  <rect x="74" y="156" width="24" height="210" rx="12" fill="#e7eef3"/>
+  <rect x="78" y="238" width="16" height="124" rx="8" fill="#2589c8"/>
+  <text x="58" y="151" fill="#657789" font-family="Arial,sans-serif" font-size="13">273 m</text>
+  <text x="58" y="389" fill="#657789" font-family="Arial,sans-serif" font-size="13">220 m</text>
+  <text x="132" y="207" fill="#657789" font-family="Arial,sans-serif" font-size="18">Výška hladiny</text>
+  <text x="128" y="272" fill="#172b3b" font-family="Arial,sans-serif" font-size="62" font-weight="700">268,42</text>
+  <text x="420" y="270" fill="#657789" font-family="Arial,sans-serif" font-size="20">m n. m.</text>
+  <rect x="540" y="154" width="164" height="92" rx="14" fill="#f3f7fa" stroke="#dce4eb"/>
+  <text x="558" y="184" fill="#657789" font-family="Arial,sans-serif" font-size="14">Přítok</text>
+  <text x="558" y="220" fill="#172b3b" font-family="Arial,sans-serif" font-size="25" font-weight="700">18,32 <tspan font-size="14" font-weight="400">m³/s</tspan></text>
+  <rect x="722" y="154" width="164" height="92" rx="14" fill="#f3f7fa" stroke="#dce4eb"/>
+  <text x="740" y="184" fill="#657789" font-family="Arial,sans-serif" font-size="14">Odtok</text>
+  <text x="740" y="220" fill="#172b3b" font-family="Arial,sans-serif" font-size="25" font-weight="700">21,06 <tspan font-size="14" font-weight="400">m³/s</tspan></text>
+  <rect x="540" y="260" width="164" height="92" rx="14" fill="#f3f7fa" stroke="#dce4eb"/>
+  <text x="558" y="290" fill="#657789" font-family="Arial,sans-serif" font-size="14">Objem nádrže</text>
+  <text x="558" y="326" fill="#172b3b" font-family="Arial,sans-serif" font-size="25" font-weight="700">230,41 <tspan font-size="14" font-weight="400">mil. m³</tspan></text>
+  <rect x="722" y="260" width="164" height="92" rx="14" fill="#f3f7fa" stroke="#dce4eb"/>
+  <text x="740" y="290" fill="#657789" font-family="Arial,sans-serif" font-size="14">Rozdíl od reference</text>
+  <text x="740" y="326" fill="#176da8" font-family="Arial,sans-serif" font-size="25" font-weight="700">+0,82 <tspan font-size="14" font-weight="400">m</tspan></text>
+  <line x1="68" y1="405" x2="890" y2="405" stroke="#dce4eb"/>
+  <text x="68" y="439" fill="#172b3b" font-family="Arial,sans-serif" font-size="17" font-weight="700">Vývoj hladiny</text>
+  <path d="M 242 446 C 330 438, 360 452, 438 436 S 555 431, 630 438 S 750 418, 870 426" fill="none" stroke="#2589c8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="870" cy="426" r="6" fill="#2589c8"/>
+</svg>

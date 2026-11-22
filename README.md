@@ -4,6 +4,8 @@ A responsive Lovelace card for the [PVL Reservoir Monitor integration](https://g
 
 The card is an independent community project. It reads Home Assistant states and history and does not connect to Povodí Vltavy.
 
+![Illustrative PVL Reservoir Monitor card preview](https://raw.githubusercontent.com/PetrOdst/PVL_Monitor_lovelace/main/card-preview.svg)
+
 ## Requirements
 
 - Home Assistant with the [PVL Reservoir Monitor integration](https://github.com/PetrOdst/PVL_Monitor) installed and configured.
