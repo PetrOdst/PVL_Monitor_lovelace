@@ -38,6 +38,16 @@ const DEFAULT_LABELS = {
   reference_difference: "Rozdíl od referenční hladiny",
 };
 
+const VISIBILITY_OPTIONS = {
+  water_level: "show_water_level",
+  inflow: "show_inflow",
+  outflow: "show_outflow",
+  volume: "show_volume",
+  precipitation_24h: "show_precipitation_24h",
+  air_temperature: "show_air_temperature",
+  reference_difference: "show_reference_difference",
+};
+
 const METRICS = [
   ["inflow", "Přítok", "m³/s", 2],
   ["outflow", "Odtok", "m³/s", 2],
@@ -77,6 +87,10 @@ class PVLReservoirCard extends HTMLElement {
         ? configured.trim()
         : DEFAULT_LABELS[key];
     });
+    const visible = {};
+    Object.entries(VISIBILITY_OPTIONS).forEach(([key, option]) => {
+      visible[key] = config[option] !== false;
+    });
 
     this._config = {
       name: typeof config.name === "string" && config.name.trim() ? config.name.trim() : "VD Slapy",
@@ -84,6 +98,7 @@ class PVLReservoirCard extends HTMLElement {
       maxLevel,
       entities,
       labels,
+      visible,
       showHistory: config.show_history !== false,
     };
     this._period = this._period || "day";
@@ -160,6 +175,7 @@ class PVLReservoirCard extends HTMLElement {
         .source { color: var(--secondary-text-color); font-size: 0.82rem; white-space: nowrap; }
         .overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 0.85fr); gap: clamp(18px, 4vw, 38px); align-items: stretch; }
         .level-panel { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 18px; align-items: center; min-height: 210px; }
+        .level-panel[hidden] { display: none; }
         .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 7px; height: 190px; }
         .gauge-label { color: var(--secondary-text-color); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
         .gauge { position: relative; flex: 1; width: 28px; overflow: hidden; border: 1px solid var(--pvl-line); border-radius: 999px; background: var(--pvl-surface); }
@@ -213,7 +229,7 @@ class PVLReservoirCard extends HTMLElement {
           <div class="source">Vodní dílo Slapy</div>
         </div>
         <div class="overview">
-          <section class="level-panel" aria-label="Aktuální výška hladiny">
+          <section class="level-panel" id="level-panel" aria-label="Aktuální výška hladiny">
             <div class="gauge-wrap" role="img" id="gauge-description">
               <span class="gauge-label" id="gauge-max"></span>
               <div class="gauge"><div class="gauge-fill" id="gauge-fill"></div></div>
@@ -247,13 +263,14 @@ class PVLReservoirCard extends HTMLElement {
       </ha-card>`;
 
     this.shadowRoot.querySelector("#card-title").textContent = this._config.name;
+    this.shadowRoot.querySelector("#level-panel").hidden = !this._config.visible.water_level;
     this.shadowRoot.querySelector("#level-label").textContent = this._config.labels.water_level;
     this.shadowRoot.querySelector("#reference-difference-label").textContent = this._config.labels.reference_difference;
     this.shadowRoot.querySelector("#gauge-min").textContent = `${this._format(this._config.minLevel, 1)} m`;
     this.shadowRoot.querySelector("#gauge-max").textContent = `${this._format(this._config.maxLevel, 1)} m`;
     this.shadowRoot.querySelector("#history-section").hidden = !this._config.showHistory;
     this._renderMetrics();
-    this.shadowRoot.querySelector("#reference-section").hidden = !this._config.entities.reference_difference;
+    this.shadowRoot.querySelector("#reference-section").hidden = !this._config.visible.reference_difference || !this._config.entities.reference_difference;
     this.shadowRoot.querySelectorAll(".periods button").forEach((button) => {
       button.addEventListener("click", () => {
         this._period = button.dataset.period;
@@ -270,7 +287,7 @@ class PVLReservoirCard extends HTMLElement {
     const container = this.shadowRoot.querySelector("#metrics");
     container.replaceChildren();
     METRICS.forEach(([key, defaultLabel, unit, precision]) => {
-      if (!this._config.entities[key]) {
+      if (!this._config.visible[key] || !this._config.entities[key]) {
         return;
       }
       const metric = document.createElement("div");
@@ -370,6 +387,9 @@ class PVLReservoirCard extends HTMLElement {
 
     METRICS.forEach(([key, _label, fallbackUnit, precision]) => {
       const target = this.shadowRoot.querySelector(`[data-metric="${key}"]`);
+      if (!target) {
+        return;
+      }
       const value = this._numericState(key);
       const unit = this._unit(key, fallbackUnit);
       let formatted = "—";
@@ -564,10 +584,21 @@ const LABEL_EDITOR_SCHEMA = [
   { name: "reference_difference_label", selector: { text: {} } },
 ];
 
+const VISIBILITY_EDITOR_SCHEMA = [
+  { name: "show_water_level", selector: { boolean: {} } },
+  { name: "show_inflow", selector: { boolean: {} } },
+  { name: "show_outflow", selector: { boolean: {} } },
+  { name: "show_volume", selector: { boolean: {} } },
+  { name: "show_precipitation_24h", selector: { boolean: {} } },
+  { name: "show_air_temperature", selector: { boolean: {} } },
+  { name: "show_reference_difference", selector: { boolean: {} } },
+];
+
 const EDITOR_SCHEMA = [
   { name: "name", selector: { text: {} } },
   { type: "expandable", name: "", flatten: true, title: "Entity senzory", schema: ENTITY_EDITOR_SCHEMA },
   { type: "expandable", name: "", flatten: true, title: "Popisky hodnot", schema: LABEL_EDITOR_SCHEMA },
+  { type: "expandable", name: "", flatten: true, title: "Zobrazení dlaždic", schema: VISIBILITY_EDITOR_SCHEMA },
   { name: "min_level", selector: { number: { mode: "box", step: 0.1, unit_of_measurement: "m" } } },
   { name: "max_level", selector: { number: { mode: "box", step: 0.1, unit_of_measurement: "m" } } },
   { name: "show_history", selector: { boolean: {} } },
@@ -589,6 +620,13 @@ const EDITOR_LABELS = {
   precipitation_24h_label: "Popisek srážek",
   air_temperature_label: "Popisek teploty vzduchu",
   reference_difference_label: "Popisek rozdílu od reference",
+  show_water_level: "Zobrazit hladinu",
+  show_inflow: "Zobrazit přítok",
+  show_outflow: "Zobrazit odtok",
+  show_volume: "Zobrazit objem nádrže",
+  show_precipitation_24h: "Zobrazit srážky",
+  show_air_temperature: "Zobrazit teplotu vzduchu",
+  show_reference_difference: "Zobrazit rozdíl od reference",
   min_level: "Minimum stupnice (m)",
   max_level: "Maximum stupnice (m)",
   show_history: "Zobrazit graf historie",
@@ -641,6 +679,9 @@ class PVLReservoirCardEditor extends HTMLElement {
     });
     Object.entries(LABEL_OPTIONS).forEach(([key, option]) => {
       data[option] = config[option] ?? DEFAULT_LABELS[key];
+    });
+    Object.entries(VISIBILITY_OPTIONS).forEach(([key, option]) => {
+      data[option] = config[option] !== false;
     });
     this._form.data = data;
   }
